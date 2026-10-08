@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>质量看板</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f3f6f8;
+            --surface: #ffffff;
+            --text: #15232d;
+            --muted: #667782;
+            --border: #dce4e8;
+            --accent: #207f78;
+            --accent-strong: #175f5a;
+            --blue: #2b6cb0;
+            --warning: #d68a1f;
+            --danger: #c94d47;
+            --shadow: 0 1px 2px rgba(23, 43, 54, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-width: 320px;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        .dashboard {
+            width: min(1440px, 100%);
+            margin: 0 auto;
+            padding: 28px;
+        }
+
+        .dashboard-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 22px;
+        }
+
+        .dashboard-title {
+            margin: 0;
+            font-size: 28px;
+            line-height: 1.2;
+            letter-spacing: 0;
+        }
+
+        .dashboard-caption {
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .report-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 0 16px;
+            border-radius: 6px;
+            background: var(--text);
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .report-link:hover {
+            background: #263945;
+        }
+
+        .report-link:focus-visible {
+            outline: 3px solid rgba(32, 127, 120, 0.24);
+            outline-offset: 2px;
+        }
+
+        .load-status {
+            min-height: 20px;
+            margin-bottom: 12px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .load-status[data-state="error"] {
+            color: var(--danger);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .stat-card {
+            min-height: 116px;
+            padding: 20px 22px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-label {
+            margin: 0 0 14px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .stat-value-row {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .stat-value {
+            font-size: 34px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0;
+        }
+
+        .stat-unit {
+            color: var(--muted);
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .chart-panel {
+            min-width: 0;
+            padding: 18px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+
+        .chart-panel--trend {
+            grid-column: span 12;
+        }
+
+        .chart-panel--defects {
+            grid-column: span 5;
+        }
+
+        .chart-panel--batches {
+            grid-column: span 7;
+        }
+
+        .panel-title {
+            margin: 0 0 14px;
+            font-size: 16px;
+            line-height: 1.3;
+            letter-spacing: 0;
+        }
+
+        .chart-wrap {
+            position: relative;
+            height: 320px;
+        }
+
+        .empty-state {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .empty-state[hidden] {
+            display: none;
+        }
+
+        @media (max-width: 920px) {
+            .dashboard {
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-panel--defects,
+            .chart-panel--batches {
+                grid-column: span 12;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .dashboard {
+                padding: 16px;
+            }
+
+            .dashboard-header {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .dashboard-title {
+                font-size: 24px;
+            }
+
+            .report-link {
+                width: 100%;
+            }
+
+            .stat-card {
+                min-height: 104px;
+                padding: 18px;
+            }
+
+            .stat-value {
+                font-size: 30px;
+            }
+
+            .chart-panel {
+                padding: 15px;
+            }
+
+            .chart-wrap {
+                height: 280px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="dashboard">
+        <header class="dashboard-header">
+            <div>
+                <h1 class="dashboard-title">质量看板</h1>
+                <p class="dashboard-caption">批次检验、缺陷分布与异常闭环总览</p>
+            </div>
+            <a class="report-link" href="/api/report/week">导出近 7 日周报</a>
+        </header>
+
+        <div id="load-status" class="load-status" role="status">正在加载数据...</div>
+
+        <section class="stats-grid" aria-label="质量指标">
+            <article class="stat-card">
+                <p class="stat-label">总受检数</p>
+                <div class="stat-value-row">
+                    <strong id="total-inspected" class="stat-value">--</strong>
+                </div>
+            </article>
+            <article class="stat-card">
+                <p class="stat-label">整体良率</p>
+                <div class="stat-value-row">
+                    <strong id="overall-yield" class="stat-value">--</strong>
+                    <span class="stat-unit">%</span>
+                </div>
+            </article>
+            <article class="stat-card">
+                <p class="stat-label">未关闭异常数</p>
+                <div class="stat-value-row">
+                    <strong id="open-issues" class="stat-value">--</strong>
+                </div>
+            </article>
+        </section>
+
+        <section class="charts-grid" aria-label="质量图表">
+            <article class="chart-panel chart-panel--trend">
+                <h2 class="panel-title">良率趋势</h2>
+                <div class="chart-wrap">
+                    <canvas id="trend-chart" role="img" aria-label="良率趋势折线图"></canvas>
+                    <div id="trend-empty" class="empty-state" hidden>暂无趋势数据</div>
+                </div>
+            </article>
+
+            <article class="chart-panel chart-panel--defects">
+                <h2 class="panel-title">缺陷分布</h2>
+                <div class="chart-wrap">
+                    <canvas id="defect-chart" role="img" aria-label="缺陷分布饼图"></canvas>
+                    <div id="defect-empty" class="empty-state" hidden>暂无缺陷数据</div>
+                </div>
+            </article>
+
+            <article class="chart-panel chart-panel--batches">
+                <h2 class="panel-title">各批次良率</h2>
+                <div class="chart-wrap">
+                    <canvas id="batch-chart" role="img" aria-label="各批次良率柱状图"></canvas>
+                    <div id="batch-empty" class="empty-state" hidden>暂无批次数据</div>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <script>
+        const numberFormatter = new Intl.NumberFormat("zh-CN");
+        const yieldFormatter = new Intl.NumberFormat("zh-CN", {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1
+        });
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const chartAnimation = reduceMotion ? false : { duration: 550 };
+
+        function setStatus(message, state) {
+            const status = document.getElementById("load-status");
+            status.textContent = message;
+            status.dataset.state = state || "";
+            status.hidden = !message;
+        }
+
+        function setEmpty(canvasId, emptyId, hasData) {
+            document.getElementById(canvasId).hidden = !hasData;
+            document.getElementById(emptyId).hidden = hasData;
+        }
+
+        function updateSummary(data, issues) {
+            const totalInspected = data.by_batch.reduce(
+                (total, item) => total + Number(item.inspected_qty || 0),
+                0
+            );
+            const totalPassed = data.by_batch.reduce(
+                (total, item) => total + Number(item.passed_qty || 0),
+                0
+            );
+            const overallYield = totalInspected
+                ? totalPassed / totalInspected * 100
+                : 0;
+            const openIssues = issues.filter(
+                (issue) => issue.status !== "已关闭"
+            ).length;
+
+            document.getElementById("total-inspected").textContent =
+                numberFormatter.format(totalInspected);
+            document.getElementById("overall-yield").textContent =
+                yieldFormatter.format(overallYield);
+            document.getElementById("open-issues").textContent =
+                numberFormatter.format(openIssues);
+        }
+
+        function renderTrendChart(trend) {
+            const hasData = Array.isArray(trend) && trend.length > 0;
+            setEmpty("trend-chart", "trend-empty", hasData);
+            if (!hasData) {
+                return;
+            }
+
+            const values = trend.map((item) => Number(item.yield_rate || 0));
+            const minimum = Math.max(0, Math.floor(Math.min(...values) - 2));
+            const maximum = Math.min(100, Math.ceil(Math.max(...values) + 1));
+
+            new Chart(document.getElementById("trend-chart"), {
+                type: "line",
+                data: {
+                    labels: trend.map((item) => item.date),
+                    datasets: [{
+                        label: "良率",
+                        data: values,
+                        borderColor: "#207f78",
+                        backgroundColor: "rgba(32, 127, 120, 0.12)",
+                        pointBackgroundColor: "#207f78",
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        borderWidth: 2,
+                        tension: 0.28,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: chartAnimation,
+                    interaction: {
+                        intersect: false,
+                        mode: "index"
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) =>
+                                    `良率 ${yieldFormatter.format(context.parsed.y)}%`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: "#667782",
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
+                        },
+                        y: {
+                            suggestedMin: minimum,
+                            suggestedMax: maximum,
+                            grid: { color: "#e7edf1" },
+                            ticks: {
+                                color: "#667782",
+                                callback: (value) => `${value}%`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderDefectChart(defects) {
+            const hasData = Array.isArray(defects) && defects.length > 0;
+            setEmpty("defect-chart", "defect-empty", hasData);
+            if (!hasData) {
+                return;
+            }
+
+            new Chart(document.getElementById("defect-chart"), {
+                type: "pie",
+                data: {
+                    labels: defects.map((item) => item.defect_name),
+                    datasets: [{
+                        data: defects.map((item) => Number(item.count || 0)),
+                        backgroundColor: [
+                            "#207f78",
+                            "#2b6cb0",
+                            "#d68a1f",
+                            "#c94d47",
+                            "#718596",
+                            "#8a6f4d"
+                        ],
+                        borderColor: "#ffffff",
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: chartAnimation,
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                color: "#42525d",
+                                padding: 14,
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) =>
+                                    `${context.label}: ${numberFormatter.format(context.parsed)}`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderBatchChart(batches) {
+            const hasData = Array.isArray(batches) && batches.length > 0;
+            setEmpty("batch-chart", "batch-empty", hasData);
+            if (!hasData) {
+                return;
+            }
+
+            const values = batches.map((item) => Number(item.yield_rate || 0));
+
+            new Chart(document.getElementById("batch-chart"), {
+                type: "bar",
+                data: {
+                    labels: batches.map((item) => item.batch_no),
+                    datasets: [{
+                        label: "良率",
+                        data: values,
+                        backgroundColor: values.map((value) =>
+                            value < 95 ? "#c94d47" : "#207f78"
+                        ),
+                        borderRadius: 4,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: chartAnimation,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) =>
+                                    `良率 ${yieldFormatter.format(context.parsed.y)}%`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: "#667782",
+                                maxRotation: 55,
+                                minRotation: 30
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: { color: "#e7edf1" },
+                            ticks: {
+                                color: "#667782",
+                                callback: (value) => `${value}%`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadDashboard() {
+            try {
+                const [yieldResponse, issueResponse] = await Promise.all([
+                    fetch("/api/yield"),
+                    fetch("/api/issues")
+                ]);
+
+                if (!yieldResponse.ok || !issueResponse.ok) {
+                    throw new Error("接口请求失败");
+                }
+
+                const [yieldData, issues] = await Promise.all([
+                    yieldResponse.json(),
+                    issueResponse.json()
+                ]);
+
+                updateSummary(yieldData, issues);
+
+                if (typeof Chart === "undefined") {
+                    throw new Error("Chart.js 加载失败，请检查网络连接");
+                }
+
+                renderTrendChart(yieldData.trend);
+                renderDefectChart(yieldData.defects);
+                renderBatchChart(yieldData.by_batch);
+                setStatus("", "");
+            } catch (error) {
+                setStatus(error.message || "加载失败，请稍后重试", "error");
+            }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

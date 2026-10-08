@@ -1,0 +1,17 @@
+{
+  "defects": [
+    {
+      "defect_type_code": "D02",
+      "defect_type_name": "尺寸超差",
+      "h": 15,
+      "w": 23,
+      "x": 257,
+      "y": 201
+    }
+  ],
+  "height": 240,
+  "image_file": "image_0018.png",
+  "is_synthetic": true,
+  "seed": 20260926,
+  "width": 320
+}

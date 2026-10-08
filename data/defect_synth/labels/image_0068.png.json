@@ -1,0 +1,17 @@
+{
+  "defects": [
+    {
+      "defect_type_code": "D04",
+      "defect_type_name": "功能失效",
+      "h": 16,
+      "w": 21,
+      "x": 122,
+      "y": 47
+    }
+  ],
+  "height": 240,
+  "image_file": "image_0068.png",
+  "is_synthetic": true,
+  "seed": 20260926,
+  "width": 320
+}

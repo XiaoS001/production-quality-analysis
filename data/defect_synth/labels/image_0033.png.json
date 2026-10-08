@@ -1,0 +1,17 @@
+{
+  "defects": [
+    {
+      "defect_type_code": "D01",
+      "defect_type_name": "外观划痕",
+      "h": 4,
+      "w": 53,
+      "x": 48,
+      "y": 132
+    }
+  ],
+  "height": 240,
+  "image_file": "image_0033.png",
+  "is_synthetic": true,
+  "seed": 20260926,
+  "width": 320
+}

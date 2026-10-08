@@ -1,0 +1,25 @@
+{
+  "defects": [
+    {
+      "defect_type_code": "D02",
+      "defect_type_name": "尺寸超差",
+      "h": 20,
+      "w": 22,
+      "x": 251,
+      "y": 193
+    },
+    {
+      "defect_type_code": "D03",
+      "defect_type_name": "装配不到位",
+      "h": 26,
+      "w": 22,
+      "x": 58,
+      "y": 144
+    }
+  ],
+  "height": 240,
+  "image_file": "image_0006.png",
+  "is_synthetic": true,
+  "seed": 20260926,
+  "width": 320
+}

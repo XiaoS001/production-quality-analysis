@@ -1,0 +1,17 @@
+{
+  "defects": [
+    {
+      "defect_type_code": "D03",
+      "defect_type_name": "装配不到位",
+      "h": 18,
+      "w": 18,
+      "x": 101,
+      "y": 24
+    }
+  ],
+  "height": 240,
+  "image_file": "image_0007.png",
+  "is_synthetic": true,
+  "seed": 20260926,
+  "width": 320
+}
