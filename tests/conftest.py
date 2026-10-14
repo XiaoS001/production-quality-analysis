@@ -20,7 +20,19 @@ os.environ["QUALITY_DATABASE_PATH"] = str(TEST_DATABASE_PATH)
 assert TEST_DATABASE_PATH.resolve() != REAL_DATABASE_PATH.resolve()
 
 from app import app as flask_app
+from auth import (
+    ROLE_ADMIN,
+    ROLE_INSPECTOR,
+    ROLE_VIEWER,
+    ensure_default_users,
+)
 from models import Batch, DefectType, InspectionItem, Product, db
+
+DEFAULT_PASSWORDS = {
+    ROLE_ADMIN: ("admin", "admin123"),
+    ROLE_INSPECTOR: ("inspector", "inspector123"),
+    ROLE_VIEWER: ("viewer", "viewer123"),
+}
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -50,9 +62,54 @@ def app():
     return flask_app
 
 
+def _login(app, role: str):
+    """用默认演示账号登录，返回带鉴权头的测试客户端。"""
+    client = app.test_client()
+    username, password = DEFAULT_PASSWORDS[role]
+    response = client.post(
+        "/api/auth/login",
+        json={"username": username, "password": password},
+    )
+    assert response.status_code == 200, response.get_data(as_text=True)
+    token = response.get_json()["token"]
+    client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {token}"
+    return client
+
+
+@pytest.fixture()
+def anon_client(app):
+    """未登录的客户端（用于验证 401）。仍会准备好演示账号，便于测试登录流程。"""
+    with app.app_context():
+        ensure_default_users()
+    return app.test_client()
+
+
 @pytest.fixture()
 def client(app):
-    return app.test_client()
+    """默认客户端：管理员身份。
+
+    2026-10-14 引入角色权限后，写接口需要令牌；本夹具自动以默认管理员登录，
+    使原有测试用例的断言保持不变（未登录行为由 test_auth.py 单独覆盖）。
+    """
+    with app.app_context():
+        ensure_default_users()
+    return _login(app, ROLE_ADMIN)
+
+
+@pytest.fixture()
+def inspector_client(app):
+    """质检员身份：可写、可复核。"""
+    with app.app_context():
+        ensure_default_users()
+    return _login(app, ROLE_INSPECTOR)
+
+
+@pytest.fixture()
+def viewer_client(app):
+    """只读身份：只能查看。"""
+    with app.app_context():
+        ensure_default_users()
+    return _login(app, ROLE_VIEWER)
 
 
 @pytest.fixture()

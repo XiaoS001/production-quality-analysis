@@ -9,6 +9,15 @@ from flask import Flask, Response, jsonify, render_template, request
 from sqlalchemy import func
 
 from annotation import annotation_bp
+from assistant import assistant_bp
+from auth import (
+    PERM_MANAGE,
+    PERM_REVIEW,
+    PERM_WRITE,
+    ensure_default_users,
+    init_auth,
+    require_permission,
+)
 from metrics import (
     defect_distribution,
     yield_by_batch,
@@ -51,6 +60,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 app.register_blueprint(annotation_bp)
+init_auth(app)
+app.register_blueprint(assistant_bp)
 
 
 @app.get("/")
@@ -61,6 +72,16 @@ def index():
 @app.get("/dashboard")
 def dashboard():
     return render_template("dashboard.html")
+
+
+@app.get("/login")
+def login_page():
+    return render_template("login.html")
+
+
+@app.get("/assistant")
+def assistant_page():
+    return render_template("assistant.html")
 
 
 @app.get("/api/yield")
@@ -154,6 +175,7 @@ def export_week_report():
 
 
 @app.post("/api/issue")
+@require_permission(PERM_WRITE)
 def create_issue():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
@@ -227,6 +249,7 @@ def list_issues():
 
 
 @app.post("/api/issue/<int:issue_id>/advance")
+@require_permission(PERM_WRITE)
 def advance_issue(issue_id: int):
     issue = db.session.get(QualityIssue, issue_id)
     if issue is None:
@@ -250,6 +273,7 @@ def advance_issue(issue_id: int):
 
 with app.app_context():
     db.create_all()
+    ensure_default_users()
 
 
 if __name__ == "__main__":

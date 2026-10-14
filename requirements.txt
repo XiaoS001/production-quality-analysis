@@ -3,3 +3,5 @@ flask-sqlalchemy
 pytest
 Pillow==12.3.0
 numpy==2.5.3
+requests
+langgraph==1.2.12

@@ -18,6 +18,7 @@ from flask import (
 )
 from sqlalchemy import func
 
+from auth import PERM_REVIEW, PERM_WRITE, require_permission
 from models import DefectAnnotation, DefectImage, DefectType, db
 
 annotation_bp = Blueprint("annotation", __name__)
@@ -222,6 +223,7 @@ def get_image_file(image_id: int):
 
 
 @annotation_bp.post("/api/annotation/image/<int:image_id>")
+@require_permission(PERM_WRITE)
 def save_annotations(image_id: int):
     image = db.session.get(DefectImage, image_id)
     if image is None:
@@ -271,6 +273,7 @@ def save_annotations(image_id: int):
 
 
 @annotation_bp.post("/api/annotation/image/<int:image_id>/review")
+@require_permission(PERM_REVIEW)
 def review_annotations(image_id: int):
     image = db.session.get(DefectImage, image_id)
     if image is None:

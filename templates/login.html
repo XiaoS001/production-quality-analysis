@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>登录 · 生产质量数据分析工具</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center;
+    justify-content: center; background: #f5f6f8; color: #1f2329;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  .card {
+    width: 380px; background: #fff; border-radius: 10px; padding: 28px 26px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .08);
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { font-size: 12px; color: #8a9099; margin-bottom: 20px; }
+  label { display: block; font-size: 13px; margin: 12px 0 6px; }
+  input {
+    width: 100%; padding: 9px 11px; font-size: 14px; border: 1px solid #d9dde3;
+    border-radius: 6px; outline: none;
+  }
+  input:focus { border-color: #2a6df5; }
+  button {
+    width: 100%; margin-top: 18px; padding: 10px; font-size: 14px; color: #fff;
+    background: #2a6df5; border: 0; border-radius: 6px; cursor: pointer;
+  }
+  button:disabled { background: #9db8f0; cursor: not-allowed; }
+  .msg { margin-top: 14px; font-size: 13px; min-height: 18px; color: #d93025; }
+  .demo { margin-top: 20px; border-top: 1px solid #eef0f3; padding-top: 14px; font-size: 12px; color: #6b7280; }
+  .demo table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .demo td { padding: 3px 0; }
+  .demo code { background: #f3f5f8; padding: 1px 5px; border-radius: 4px; }
+  .fill { color: #2a6df5; cursor: pointer; text-decoration: underline; font-size: 12px; }
+  .links { margin-top: 16px; font-size: 12px; }
+  .links a { color: #2a6df5; text-decoration: none; margin-right: 12px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>生产质量数据分析工具</h1>
+  <div class="sub">请登录后使用；不同角色可用功能不同</div>
+
+  <label for="username">用户名</label>
+  <input id="username" autocomplete="username" placeholder="如 admin">
+
+  <label for="password">密码</label>
+  <input id="password" type="password" autocomplete="current-password" placeholder="请输入密码">
+
+  <button id="submit">登录</button>
+  <div class="msg" id="msg"></div>
+
+  <div class="demo">
+    <div>演示账号（点击自动填入）</div>
+    <table>
+      <tr><td><span class="fill" data-u="admin" data-p="admin123">admin / admin123</span></td><td>管理员：查看 + 录入 + 复核 + 用户管理</td></tr>
+      <tr><td><span class="fill" data-u="inspector" data-p="inspector123">inspector / inspector123</span></td><td>质检员：查看 + 录入 + 复核</td></tr>
+      <tr><td><span class="fill" data-u="viewer" data-p="viewer123">viewer / viewer123</span></td><td>只读：仅查看</td></tr>
+    </table>
+  </div>
+
+  <div class="links">
+    <a href="/assistant">AI 助手</a>
+    <a href="/dashboard">质量看板</a>
+    <a href="/annotation">图像标注</a>
+  </div>
+</div>
+
+<script>
+  const msg = document.getElementById('msg');
+  const btn = document.getElementById('submit');
+
+  document.querySelectorAll('.fill').forEach(function (el) {
+    el.addEventListener('click', function () {
+      document.getElementById('username').value = el.dataset.u;
+      document.getElementById('password').value = el.dataset.p;
+    });
+  });
+
+  async function login() {
+    msg.textContent = '';
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    if (!username || !password) { msg.textContent = '请输入用户名和密码'; return; }
+
+    btn.disabled = true;
+    try {
+      const resp = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+      });
+      const data = await resp.json();
+      if (!resp.ok) { msg.textContent = data.error || '登录失败'; return; }
+      localStorage.setItem('xm02_token', data.token);
+      localStorage.setItem('xm02_identity', JSON.stringify({
+        username: data.username, role: data.role, role_label: data.role_label,
+        permission_labels: data.permission_labels
+      }));
+      location.href = '/assistant';
+    } catch (err) {
+      msg.textContent = '网络错误：' + err;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  btn.addEventListener('click', login);
+  document.getElementById('password').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') login();
+  });
+</script>
+</body>
+</html>

@@ -138,3 +138,17 @@ class DefectAnnotation(db.Model):
 
     image = db.relationship("DefectImage", back_populates="annotations")
     defect_type = db.relationship("DefectType")
+
+
+class AppUser(db.Model):
+    """系统用户（用于角色权限：管理员 / 质检员 / 只读）。"""
+
+    __tablename__ = "app_user"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), nullable=False, unique=True)
+    display_name = db.Column(db.String(128))
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(32), nullable=False, default="viewer")
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
