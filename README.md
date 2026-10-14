@@ -151,13 +151,21 @@ $env:QUALITY_DATABASE_PATH=(Resolve-Path 'quality.db').Path
 ```powershell
 .\venv\Scripts\python.exe -m pytest tests -p no:warnings      # 45 passed
 .\venv\Scripts\python.exe smoke_assistant.py                  # 真实启动冒烟 15/15
+.\venv\Scripts\python.exe probe_xm02.py                       # 缺陷探测 80 项（鉴权矩阵/输入边界/空库/注入）
+.\venv\Scripts\python.exe probe_xm02_ext.py                   # 密钥伪造实证 + 并发写入
 ```
 
 `smoke_assistant.py` 会复制一份数据库副本、真实启动服务并打接口，校验
-「未登录 401 / 只读越权 403 / 质检员可写 / 助手返回真实数字 / 真实库哈希不变」。
+「未登录 401 / 只读越权 403 / 质检员可写 / 助手返回真实数字 / 真实库业务数据未变」。
+`probe_*.py` 是质检探测脚本，完整结论见 `质检报告-XM02-20261014.md`。
 
 测试使用临时数据库，不读写 `quality.db`；合成器、检测与助手用例全部离线执行，
 助手的大模型调用在测试中被替换为替身，**不消耗真实 API 额度**。
+
+### 数据库初始化时机
+
+建表与演示账号由 `init_database()` 负责，**在首次请求时惰性执行**，不在模块导入时执行
+—— 这样 `flask routes`、脚本 `import app` 一类只读动作不会写数据库。
 
 ## 主要局限
 

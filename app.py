@@ -271,10 +271,31 @@ def advance_issue(issue_id: int):
     return jsonify({"id": issue.id, "status": issue.status})
 
 
-with app.app_context():
-    db.create_all()
-    ensure_default_users()
+_db_initialized = False
+
+
+def init_database() -> list[str]:
+    """建表并补齐演示账号（幂等）。
+
+    ⚠️ 不在模块导入时执行：否则 `flask routes`、脚本 `import app` 等**任何导入动作**
+    都会写数据库（2026-10-14 质检发现：`flask --app app routes` 曾因此往真实库写入）。
+    改为首次处理请求时惰性初始化。
+    """
+    global _db_initialized
+    with app.app_context():
+        db.create_all()
+        created = ensure_default_users()
+    _db_initialized = True
+    return created
+
+
+@app.before_request
+def _ensure_database_ready() -> None:
+    """首次请求前完成建表与演示账号补齐。"""
+    if not _db_initialized:
+        init_database()
 
 
 if __name__ == "__main__":
+    init_database()
     app.run(debug=True, port=5001)

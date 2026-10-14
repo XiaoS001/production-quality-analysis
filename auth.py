@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 from functools import wraps
 from typing import Any, Callable
 
@@ -60,7 +61,6 @@ DEFAULT_USERS: tuple[tuple[str, str, str, str], ...] = (
 
 TOKEN_SALT = "xm02-auth-token"
 TOKEN_MAX_AGE_SECONDS = 8 * 60 * 60
-DEV_SECRET_KEY = "xm02-dev-secret-change-me"
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -292,9 +292,20 @@ def list_users():
 # 初始化
 # --------------------------------------------------------------------------- #
 def init_auth(app) -> None:
-    """注册认证蓝图，并确保 SECRET_KEY 可用。"""
+    """注册认证蓝图，并确保 SECRET_KEY 可用。
+
+    ⚠️ 不在代码里放「可用的默认密钥」——否则未配置 ``XM02_SECRET_KEY`` 的部署，
+    任何人都能用源码里公开的值伪造令牌（2026-10-14 质检实证：伪造管理员令牌直接 200）。
+    未配置时生成**随机密钥**并告警：安全优先，代价是重启后旧令牌失效。
+    """
     if not app.config.get("SECRET_KEY"):
-        app.config["SECRET_KEY"] = (
-            os.environ.get("XM02_SECRET_KEY") or DEV_SECRET_KEY
-        )
+        configured = os.environ.get("XM02_SECRET_KEY")
+        if configured:
+            app.config["SECRET_KEY"] = configured
+        else:
+            app.config["SECRET_KEY"] = secrets.token_hex(32)
+            app.logger.warning(
+                "未配置 XM02_SECRET_KEY：已生成临时随机密钥，重启后所有登录令牌失效。"
+                "生产环境请通过环境变量固定配置。"
+            )
     app.register_blueprint(auth_bp)

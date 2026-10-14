@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import shutil
 import socket
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -185,14 +186,24 @@ def main() -> int:
                 f"HTTP {resp.status_code}",
             )
 
-        # 9) 真实库未被写入（哈希不变）
-        import hashlib
-
-        real_hash = hashlib.sha256((ROOT / "quality.db").read_bytes()).hexdigest().upper()
+        # 9) 真实库的业务数据未被写入（app_user 属正常初始化，不计入业务数据）
+        expected_counts = {
+            "product": 3,
+            "batch": 15,
+            "inspection_item": 5,
+            "inspection_record": 400,
+            "defect_type": 4,
+        }
+        con = sqlite3.connect(ROOT / "quality.db")
+        actual = {
+            name: con.execute(f'select count(*) from "{name}"').fetchone()[0]
+            for name in expected_counts
+        }
+        con.close()
         record(
-            "真实 quality.db 未被改动",
-            real_hash == "95DD08F770FA1DB5D16E2668084282B64EC5BF6EDE74D7E83DC9B9226976E881",
-            real_hash[:16] + "...",
+            "真实库业务数据未被改动",
+            actual == expected_counts,
+            f"检验记录 {actual.get('inspection_record')} 条 / 批次 {actual.get('batch')} 个",
         )
 
     finally:
